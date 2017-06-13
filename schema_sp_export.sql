@@ -916,7 +916,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `EXPORTDB`(dataFinal date,distrito v
     READS SQL DATA
 BEGIN
 
-CALL FillTHDD(distrito);
+CALL FillTHDD();
 
 CALL FillTPacienteTable(dataFinal);
 
@@ -2798,117 +2798,21 @@ DROP PROCEDURE IF EXISTS `FillTHDD`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTHDD`(distrito varchar(40))
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTHDD`()
     READS SQL DATA
 BEGIN
 
 truncate table t_hdd;
+SELECT county_district INTO @distrito FROM openmrs.location l WHERE l.location_id = (select DISTINCT location_id from openmrs.obs);
+SELECT property_value INTO @hfc FROM openmrs.global_property WHERE property = 'esaudemetadata.hfc';
+SELECT DISTINCT location_id INTO @loc FROM openmrs.obs;
 
 insert into t_hdd(hdd,designacao,local,distrito,provincia,location_id)
 select location_id,name,address2,county_district,state_province,location_id
 from openmrs.location l
-where county_district=distrito;
+where county_district=@distrito;
 
-
-update t_hdd,
-	(select hdd,case hdd
-		when 227   then '040201'
-		when 9   then '040213'
-		when 110 then '040211'
-		when 111 then '040212'
-		when 112 then '040207'
-		when 113 then '040208'
-		/*when 358 then '040216' - Ecole
-		when 359 then '040259' - Novanana
-		when 360 then '040255' - Nacuacua*/
-
-		when 14  then '040307'
-		when 49  then '040308'
-		when 103 then '040337'
-		/*when 104 then '040311' - Micaune
-		when 118 then '040315' - ???*/
-
-		when  6  then '040407'
-		when 25  then '040406'
-		when 26  then '040408'
-		when 27  then '040410'
-		when 54  then '040409'
-		when 102 then '040455'
-		/*when 103 then '040462' - Pury*/
-		when 362 then '040439'
-
-		when 4   then '040607'
-		when 10  then '040608'
-		when 55  then '040609'
-		when 104 then '040613'
-		/*when 107 then '040655' - Caruane*/
-		when 108 then '040610'
-
-		when 7   then '040708'
-		when 24  then '040707'
-		when 56  then '040756'
-		when 57  then '040713'
-		when 58  then '040706'
-		/*when 109 then '040710' - Olinda*/
-
-		when 5   then '041406'
-		when 17  then '041408'
-		when 67  then '041410'
-		when 68  then '041409'
-		when 69  then '041407'
-		/*when 70  then '041418' - Mugubia*/
-		when 71  then '041414'
-		when 90  then '041415'
-
-
-		when 13  then '041306'
-		when 50  then '041315'
-		when 51  then '041309'
-		/*when 87  then '041359' - Chilomo*/
-		when 88  then '041310'
-		when 89  then '041313'
-		when 91  then '041307'
-		/*when 92  then '041308' - Cumbapo*/
-		when 96  then '041311'
-		when 97  then '041314'
-		when 98  then '041312'
-		when 99  then '041316'
-
-		when 16   then '041706'
-		when 29   then '041715'
-		when 53   then '041713'
-		when 74   then '041708'
-		/*when 75   then '041709' - Malema
-		when 84   then '041712' - Muligode*/
-		when 85   then '041717'
-		when 86   then '041757'
-		/*when 100  then '041716' - Impaca*/
-		when 120  then '041758'
-		when 121  then '041711'
-		/*when 367  then '041756' - Txalalane*/
-
-		when 15   then '040906'
-		when 61   then '040911'
-		when 62   then '040910'
-		/*when 63   then '0409'(Mapira)*/
-		when 64   then '040916'
-		/*when 65   then '040907'-Bajone
-		when 101  then '040912'-Tapata
-		when 364  then '040960'-Naico
-		when 365  then '040920'-Missal*/
-		when 366  then '040917'
-		when 11   then '041209'
-		when 52   then '041210'
-		when 66   then '041206'
-		when 355  then '041213'
-		when 356  then '041208'
-		/*when 357  then '041207' - Gulamo*/
-else hdd
-end as codhdd
-
-from t_hdd )codhdd
-set t_hdd.hdd=codhdd.codhdd
-where t_hdd.hdd=codhdd.hdd;
+update t_hdd set t_hdd.hdd=@hfc WHERE t_hdd.hdd=@loc;
 
 delete from t_hdd where length(hdd)<=4;
 
