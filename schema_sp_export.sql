@@ -912,33 +912,33 @@ DROP PROCEDURE IF EXISTS `EXPORTDB`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `EXPORTDB`(dataFinal date,distrito varchar(40))
+CREATE DEFINER=`root`@`localhost` PROCEDURE `EXPORTDB`()
     READS SQL DATA
 BEGIN
 
 CALL FillTHDD();
 
-CALL FillTPacienteTable(dataFinal);
+CALL FillTPacienteTable();
 
 CALL FillProcessoParteA();
 
-CALL FillTSeguimento(dataFinal);
+CALL FillTSeguimento();
 
-CALL FillTarvTable(dataFinal);
+CALL FillTarvTable();
 
-CALL FillObservacaopaciente(dataFinal);
+CALL FillObservacaopaciente();
 
-CALL FillHistestadopaciente(dataFinal);
+CALL FillHistestadopaciente();
 
-CALL FillGaacTBusca(dataFinal);
+CALL FillGaacTBusca();
 
-CALL FillExposicaoTARV(dataFinal);
+CALL FillExposicaoTARV();
 
-CALL FillAconselhamentoTable(dataFinal);
+CALL FillAconselhamentoTable();
 
 CALL FillAntecedentesclinicospaciente();
 
-CALL FillTratamentoTb(dataFinal);
+CALL FillTratamentoTb();
 END $$
 /*!50003 SET SESSION SQL_MODE=@TEMP_SQL_MODE */  $$
 
@@ -953,19 +953,20 @@ DROP PROCEDURE IF EXISTS `FillAconselhamentoTable`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillAconselhamentoTable`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillAconselhamentoTable`()
     READS SQL DATA
 BEGIN
 
 truncate table t_aconselhamento;
 truncate table t_actividadeaconselhamento;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 /*Acrescentar a coluna encounter_id na tabela t_aconselhamento*/
 INSERT INTO t_aconselhamento (nid,encounter_id)
 SELECT 	nid,encounter_id
 FROM 	t_paciente p
 		inner join openmrs.encounter e on p.patient_id=e.patient_id
-WHERE 	nid IS NOT NULL and e.encounter_type in (19,29) and e.voided=0 and e.encounter_datetime<=dataFinal;
+WHERE 	nid IS NOT NULL and e.encounter_type in (19,29) and e.voided=0 and e.encounter_datetime<=@dateFinal;
 
 
 
@@ -1214,12 +1215,13 @@ DROP PROCEDURE IF EXISTS `FillExposicaoTARV`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillExposicaoTARV`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillExposicaoTARV`()
     READS SQL DATA
 BEGIN
 
 truncate table t_esposicaotarvmae;
 truncate table t_esposicaotarvnascenca;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 INSERT INTO t_esposicaotarvmae (nid, tarv)
 SELECT p.nid,tarv.tarv
@@ -1234,10 +1236,10 @@ FROM 	t_paciente p
 								INNER JOIN openmrs.concept_name cn ON cn.concept_id=o.value_coded AND cn.locale='pt' AND cn.concept_name_type='FULLY_SPECIFIED'
 								INNER JOIN openmrs.encounter e ON e.encounter_id=o.encounter_id AND o.person_id=e.patient_id
 					   WHERE 	e.encounter_type=7 AND o.concept_id=1504 AND o.value_coded IN (631,797,792,1800,1801,630,628) AND o.voided=0
-								AND cn.voided=0 and e.voided=0 and e.encounter_datetime<=dataFinal
+								AND cn.voided=0 and e.voided=0 and e.encounter_datetime<=@dateFinal
 				) tarv ON tarv.person_id=p.patient_id AND tarv.encounter_id=e.encounter_id
 
-WHERE e.encounter_type IN (7) AND e.voided=0 and e.encounter_datetime<=dataFinal;
+WHERE e.encounter_type IN (7) AND e.voided=0 and e.encounter_datetime<=@dateFinal;
 
 
 INSERT INTO t_esposicaotarvnascenca (nid, tarv)
@@ -1253,9 +1255,9 @@ FROM 	t_paciente p
 							INNER JOIN openmrs.concept_name cn ON cn.concept_id=o.value_coded AND cn.locale='pt' AND cn.concept_name_type='FULLY_SPECIFIED'
 							INNER JOIN openmrs.encounter e ON e.encounter_id=o.encounter_id AND o.person_id=e.patient_id
 				   WHERE 	e.encounter_type=7 AND o.concept_id=1503 AND o.value_coded IN (631,797,792,1800,1801,630,628)
-							AND o.voided=0 AND cn.voided=0 AND e.voided=0 and e.encounter_datetime<=dataFinal
+							AND o.voided=0 AND cn.voided=0 AND e.voided=0 and e.encounter_datetime<=@dateFinal
 			   ) tarv ON tarv.person_id=p.patient_id AND tarv.encounter_id=e.encounter_id
-WHERE e.encounter_type IN (7) AND e.voided=0 and e.encounter_datetime<=dataFinal;
+WHERE e.encounter_type IN (7) AND e.voided=0 and e.encounter_datetime<=@dateFinal;
 
 END $$
 /*!50003 SET SESSION SQL_MODE=@TEMP_SQL_MODE */  $$
@@ -1271,7 +1273,7 @@ DROP PROCEDURE IF EXISTS `FillGaacTBusca`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillGaacTBusca`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillGaacTBusca`()
     READS SQL DATA
 begin
 
@@ -1284,6 +1286,7 @@ truncate table t_afinidade;
 truncate table t_buscaactiva;
 
 set foreign_key_checks=1;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 /*Inserir afinidade e t_gaac*/
 
@@ -1295,7 +1298,7 @@ select gaac_id, start_date,af.name, date_crumbled,nid
 from  	openmrs.gaac
 		inner join openmrs.gaac_affinity_type af on affinity_type=gaac_affinity_type_id
 		left join t_paciente p on p.patient_id=focal_patient_id
-where 	gaac.voided=0 and gaac.start_date<=dataFinal;
+where 	gaac.voided=0 and gaac.start_date<=@dateFinal;
 
 
 /*Inserir t_gaac_actividades*/
@@ -1305,7 +1308,7 @@ from 	t_paciente p
 		inner  join openmrs.gaac_member gm on p.patient_id=gm.member_id
 		inner join t_gaac on t_gaac.numgaac=gm.gaac_id
 		left join openmrs.gaac_reason_leaving_type rl on gaac_reason_leaving_type_id=reason_leaving_type
-where gm.voided=0 and gm.start_date<=dataFinal;
+where gm.voided=0 and gm.start_date<=@dateFinal;
 
 /*ACTUALIZAR HDD*/
 update t_gaac,t_hdd,openmrs.gaac
@@ -1320,7 +1323,7 @@ insert into t_buscaactiva(nid,datacomecoufaltar,patient_id)
 select distinct	p.nid,e.encounter_datetime,e.patient_id
 from 	t_paciente p
 		inner join openmrs.encounter e on p.patient_id=e.patient_id
-where 	e.voided=0 and e.encounter_type=21 and e.encounter_datetime<=dataFinal;
+where 	e.voided=0 and e.encounter_type=21 and e.encounter_datetime<=@dateFinal;
 
 /*ACTUALIZAR ENCOUNTER_ID*/
 update 	t_buscaactiva,openmrs.encounter
@@ -1622,11 +1625,12 @@ DROP PROCEDURE IF EXISTS `FillHistestadopaciente`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillHistestadopaciente`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillHistestadopaciente`()
     READS SQL DATA
 BEGIN
 
 truncate table t_histestadopaciente;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 insert into t_histestadopaciente (nid, codestado, dataestado, destinopaciente)
 select	p.nid,
@@ -1647,10 +1651,10 @@ from	t_paciente p
 								o.value_text as destinopaciente
 						from	openmrs.encounter e
 								inner join openmrs.obs o on e.encounter_id=o.encounter_id
-						where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=2059 and e.encounter_datetime<=dataFinal
+						where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=2059 and e.encounter_datetime<=@dateFinal
 					) destino on e.encounter_id=destino.encounter_id
 where	e.encounter_type in (18,6,9) and o.concept_id in (1708,6138) and o.voided=0 and e.voided=0 and p.nid is not null and o.value_coded<>6269 and
-		e.encounter_datetime<=dataFinal;
+		e.encounter_datetime<=@dateFinal;
 
 insert into t_histestadopaciente (nid, codestado, dataestado)
 select 	nid,
@@ -1665,7 +1669,7 @@ from 	t_paciente p
 		inner join openmrs.patient_program pg on p.patient_id=pg.patient_id
 		inner join openmrs.patient_state ps on pg.patient_program_id=ps.patient_program_id
 where 	pg.voided=0 and ps.voided=0 and
-		pg.program_id=2 and ps.state in (7,8,9,10) and ps.end_date is not null and ps.start_date<=dataFinal;
+		pg.program_id=2 and ps.state in (7,8,9,10) and ps.end_date is not null and ps.start_date<=@dateFinal;
 END $$
 /*!50003 SET SESSION SQL_MODE=@TEMP_SQL_MODE */  $$
 
@@ -1680,11 +1684,12 @@ DROP PROCEDURE IF EXISTS `FillObservacaopaciente`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillObservacaopaciente`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillObservacaopaciente`()
     READS SQL DATA
 BEGIN
 
 truncate table t_observacaopaciente;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 /*First*/
 INSERT INTO t_observacaopaciente (codobservacao, codestado, valor, nid, data)
@@ -1749,7 +1754,7 @@ SELECT	case c.concept_id
 				inner join	openmrs.concept c on c.concept_id=o.concept_id
 	 WHERE e.encounter_type in (1,3) and
 				o.voided=0 and cn.voided=0 and e.voided=0 and p.nid is not null and
-				c.datatype_id=1 and c.is_set=0 and p.datanasc is not null and e.encounter_datetime<=dataFinal;
+				c.datatype_id=1 and c.is_set=0 and p.datanasc is not null and e.encounter_datetime<=@dateFinal;
 
 
 /*Second*/
@@ -1809,7 +1814,7 @@ FROM	t_paciente p
 		inner join	openmrs.concept c on c.concept_id=o.concept_id
 WHERE	e.encounter_type in (1,3) and
 		o.voided=0 and cn.voided=0 and e.voided=0 and p.nid is not null and
-		c.datatype_id=2 and c.is_set=0  and p.datanasc is not null and o.obs_datetime is not null and e.encounter_datetime<=dataFinal;
+		c.datatype_id=2 and c.is_set=0  and p.datanasc is not null and o.obs_datetime is not null and e.encounter_datetime<=@dateFinal;
 
 
 /*Third*/
@@ -1844,7 +1849,7 @@ FROM	t_paciente p
 	inner join	openmrs.concept c on c.concept_id=o.concept_id
 WHERE	e.encounter_type in (1,3) and
 	o.voided=0 and cn.voided=0 and e.voided=0 and p.nid is not null and
-	c.datatype_id=3 and c.is_set=0 and p.datanasc is not null and e.encounter_datetime<=dataFinal;
+	c.datatype_id=3 and c.is_set=0 and p.datanasc is not null and e.encounter_datetime<=@dateFinal;
 
 
 /*Atualizar medico*/
@@ -2476,12 +2481,13 @@ DROP PROCEDURE IF EXISTS `FillTarvTable`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTarvTable`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTarvTable`()
     READS SQL DATA
 begin
 
 truncate table t_tarv;
 truncate table t_questionariotb;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 
 /*Acrescentar na tabela t_tarv os campos encounter_id e patient_id, retirar a chave composta nid, datatarv,codregime e colocar a pk no idtarv
@@ -2491,7 +2497,7 @@ Insert into export_db.t_tarv(encounter_id,patient_id,datatarv)
 select 	e.encounter_id,p.patient_id,e.encounter_datetime
 from 	export_db.t_paciente p
 		inner join openmrs.encounter e on e.patient_id=p.patient_id
-where 	e.encounter_datetime<=dataFinal and e.voided=0 and e.encounter_type=18;
+where 	e.encounter_datetime<=@dateFinal and e.voided=0 and e.encounter_type=18;
 
 
 /*ACTUALIZAR TIPO TARV - FRIDA*/
@@ -2511,7 +2517,7 @@ update export_db.t_tarv,
 				t.encounter_id
 		from 	export_db.t_tarv t
 		inner join openmrs.obs o on t.encounter_id=o.encounter_id
-		where 	o.voided=0 and o.concept_id=1255 and o.obs_datetime<=dataFinal
+		where 	o.voided=0 and o.concept_id=1255 and o.obs_datetime<=@dateFinal
 	) tipotarv
 set		t_tarv.tipotarv=tipotarv.tipo
 where	t_tarv.encounter_id=tipotarv.encounter_id;
@@ -2535,7 +2541,7 @@ update t_tarv,
 		from	export_db.t_tarv t
 				inner join openmrs.encounter e on e.patient_id=t.patient_id
 				inner join openmrs.obs o on e.encounter_id=o.encounter_id
-		where 	e.encounter_type in (6,9) and e.voided=0 and o.voided=0 and o.concept_id=1255 and e.encounter_datetime<=dataFinal
+		where 	e.encounter_type in (6,9) and e.voided=0 and o.voided=0 and o.concept_id=1255 and e.encounter_datetime<=@dateFinal
 	) tipotarv
 set		t_tarv.tipotarv=tipotarv.tipo
 where	t_tarv.patient_id =tipotarv.patient_id and t_tarv.datatarv=tipotarv.encounter_datetime;
@@ -2552,7 +2558,7 @@ update t_tarv,
 					inner join openmrs.obs o on o.encounter_id=e.encounter_id
 			where 	e.voided=0 and o.voided=0 and p.voided=0 and
 					e.encounter_type in (18,6,9) and o.concept_id=1255 and o.value_coded=1256 and
-					e.encounter_datetime<=dataFinal
+					e.encounter_datetime<=@dateFinal
 			group by p.patient_id
 
 			union
@@ -2563,7 +2569,7 @@ update t_tarv,
 					inner join openmrs.obs o on e.encounter_id=o.encounter_id
 			where 	p.voided=0 and e.voided=0 and o.voided=0 and e.encounter_type in (18,6,9) and
 					o.concept_id=1190 and o.value_datetime is not null and
-					o.value_datetime<=dataFinal
+					o.value_datetime<=@dateFinal
 			group by p.patient_id
 
 			union
@@ -2571,7 +2577,7 @@ update t_tarv,
 			select 	pg.patient_id,date_enrolled as data_inicio
 			from 	openmrs.patient p inner join openmrs.patient_program pg on p.patient_id=pg.patient_id
 			where 	pg.voided=0 and p.voided=0 and program_id=2 and
-					pg.date_enrolled<=dataFinal
+					pg.date_enrolled<=@dateFinal
 		) inicio
 		group by patient_id
 	)inicio_real
@@ -2620,7 +2626,7 @@ update t_tarv,
 	else 'OUTRO' end as ultimo_regime
 	from	openmrs.encounter e
 			inner join openmrs.obs o on e.encounter_id=o.encounter_id
-	where	e.voided=0 and o.voided=0 and o.concept_id=1088 and e.encounter_type=18 and e.encounter_datetime<=dataFinal
+	where	e.voided=0 and o.voided=0 and o.concept_id=1088 and e.encounter_type=18 and e.encounter_datetime<=@dateFinal
 ) regime
 set t_tarv.codregime=regime.ultimo_regime
 where t_tarv.encounter_id=regime.encounter_id;
@@ -2632,7 +2638,7 @@ update t_tarv,
 			o.value_datetime as dataproxima
 	from	openmrs.encounter e
 			inner join openmrs.obs o on e.encounter_id=o.encounter_id
-	where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=5096 and e.encounter_datetime<=dataFinal
+	where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=5096 and e.encounter_datetime<=@dateFinal
 ) proxima
 set t_tarv.dataproxima=proxima.dataproxima
 where t_tarv.encounter_id=proxima.encounter_id;
@@ -2644,7 +2650,7 @@ update t_tarv,
 			o.value_numeric as qtdComp
 	from	openmrs.encounter e
 			inner join openmrs.obs o on e.encounter_id=o.encounter_id
-	where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=1715 and e.encounter_datetime<=dataFinal
+	where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=1715 and e.encounter_datetime<=@dateFinal
 ) aviada
 set t_tarv.QtdComp=aviada.qtdComp
 where t_tarv.encounter_id=aviada.encounter_id;
@@ -2657,7 +2663,7 @@ update t_tarv,
 			o.value_numeric as qtdSaldo
 	from	openmrs.encounter e
 			inner join openmrs.obs o on e.encounter_id=o.encounter_id
-	where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=1713 and e.encounter_datetime<=dataFinal
+	where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=1713 and e.encounter_datetime<=@dateFinal
 ) saldo
 set t_tarv.QtdSaldo=saldo.qtdSaldo
 where t_tarv.encounter_id=saldo.encounter_id;
@@ -2670,7 +2676,7 @@ update t_tarv,
 			o.value_text as dose
 	from	openmrs.encounter e
 			inner join openmrs.obs o on e.encounter_id=o.encounter_id
-	where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=1711 and e.encounter_datetime<=dataFinal
+	where	e.voided=0 and o.voided=0 and e.encounter_type=18 and o.concept_id=1711 and e.encounter_datetime<=@dateFinal
 ) dosagem
 set t_tarv.dose=dosagem.dose
 where t_tarv.encounter_id=dosagem.encounter_id;
@@ -2706,7 +2712,7 @@ update t_tarv,
 		from	export_db.t_tarv t
 				inner join openmrs.encounter e on e.patient_id=t.patient_id
 				inner join openmrs.obs o on e.encounter_id=o.encounter_id
-		where 	e.encounter_type in (6,9) and e.voided=0 and o.voided=0 and o.concept_id=1792 and e.encounter_datetime<=dataFinal
+		where 	e.encounter_type in (6,9) and e.voided=0 and o.voided=0 and o.concept_id=1792 and e.encounter_datetime<=@dateFinal
 	) mudanca
 set		t_tarv.codmudanca=mudanca.codmudanca
 where	t_tarv.patient_id =mudanca.patient_id and t_tarv.datatarv=mudanca.encounter_datetime;
@@ -2733,7 +2739,7 @@ update t_tarv,
 		from	export_db.t_tarv t
 				inner join openmrs.encounter e on e.patient_id=t.patient_id
 				inner join openmrs.obs o on e.encounter_id=o.encounter_id
-		where 	e.encounter_type in (6,9) and e.voided=0 and o.voided=0 and o.concept_id=2015 and e.encounter_datetime<=dataFinal
+		where 	e.encounter_type in (6,9) and e.voided=0 and o.voided=0 and o.concept_id=2015 and e.encounter_datetime<=@dateFinal
 	) efeitos
 set		t_tarv.efeitosSecundarios=efeitos.efeito
 where	t_tarv.patient_id=efeitos.patient_id and t_tarv.datatarv=efeitos.encounter_datetime;
@@ -2752,7 +2758,7 @@ update t_tarv,
 		from	export_db.t_tarv t
 				inner join openmrs.encounter e on e.patient_id=t.patient_id
 				inner join openmrs.obs o on e.encounter_id=o.encounter_id
-		where 	e.encounter_type in (6,9) and e.voided=0 and o.voided=0 and o.concept_id=6334 and e.encounter_datetime<=dataFinal
+		where 	e.encounter_type in (6,9) and e.voided=0 and o.voided=0 and o.concept_id=6334 and e.encounter_datetime<=@dateFinal
 	) criterio_inicio
 set		t_tarv.motivoInicioTarv=criterio_inicio.criterio
 where	t_tarv.patient_id=criterio_inicio.patient_id and t_tarv.datatarv=criterio_inicio.encounter_datetime;
@@ -2782,7 +2788,7 @@ Select distinct codopcao.codopcao, if(codopcao.codopcao is not null,TRUE,FALSE) 
                       inner join openmrs.obs o on e.encounter_id=o.encounter_id
                WHERE 	e.encounter_type=20 and o.concept_id=1766 and o.voided=0 and e.voided=0
                       ) codopcao on codopcao.encounter_id=e.encounter_id
-       where e.encounter_type=20 and  e.voided=0 and p.nid is not null and e.encounter_datetime<=dataFinal;
+       where e.encounter_type=20 and  e.voided=0 and p.nid is not null and e.encounter_datetime<=@dateFinal;
 
 end $$
 /*!50003 SET SESSION SQL_MODE=@TEMP_SQL_MODE */  $$
@@ -2830,11 +2836,12 @@ DROP PROCEDURE IF EXISTS `FillTPacienteTable`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTPacienteTable`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTPacienteTable`()
     READS SQL DATA
 begin
 
 truncate table t_paciente;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 /*Inscricao*/
 	insert into export_db.t_paciente(patient_id,sexo,datanasc)
@@ -2848,7 +2855,7 @@ update 	export_db.t_paciente,
 		(	Select 	p.patient_id,min(encounter_datetime) data_abertura,if(e.encounter_type=5,'Adulto','Crianca') tipopaciente,e.location_id
 			from 	openmrs.patient p
 					inner join openmrs.encounter e on e.patient_id=p.patient_id
-			where 	p.voided=0 and e.encounter_type in (5,7) and e.voided=0 and e.encounter_datetime<=dataFinal
+			where 	p.voided=0 and e.encounter_type in (5,7) and e.voided=0 and e.encounter_datetime<=@dateFinal
 			group by patient_id
 		) abertura
 set t_paciente.dataabertura=abertura.data_abertura,
@@ -3001,7 +3008,7 @@ update t_paciente,
 					inner join openmrs.obs o on o.encounter_id=e.encounter_id
 			where 	e.voided=0 and o.voided=0 and p.voided=0 and
 					e.encounter_type in (18,6,9) and o.concept_id=1255 and o.value_coded=1256 and
-					e.encounter_datetime<=dataFinal
+					e.encounter_datetime<=@dateFinal
 			group by p.patient_id
 
 			union
@@ -3012,7 +3019,7 @@ update t_paciente,
 					inner join openmrs.obs o on e.encounter_id=o.encounter_id
 			where 	p.voided=0 and e.voided=0 and o.voided=0 and e.encounter_type in (18,6,9) and
 					o.concept_id=1190 and o.value_datetime is not null and
-					o.value_datetime<=dataFinal
+					o.value_datetime<=@dateFinal
 			group by p.patient_id
 
 			union
@@ -3020,7 +3027,7 @@ update t_paciente,
 			select 	pg.patient_id,date_enrolled as data_inicio
 			from 	openmrs.patient p inner join openmrs.patient_program pg on p.patient_id=pg.patient_id
 			where 	pg.voided=0 and p.voided=0 and program_id=2 and
-					pg.date_enrolled<=dataFinal
+					pg.date_enrolled<=@dateFinal
 		) inicio
 		group by patient_id
 	)inicio_real
@@ -3045,7 +3052,7 @@ update t_paciente,
 				inner join openmrs.patient_state ps on pg.patient_program_id=ps.patient_program_id
 		where 	pg.voided=0 and ps.voided=0 and
 				pg.program_id=2 and ps.state in (7,8,9,10) and ps.end_date is null and
-				ps.start_date<=dataFinal
+				ps.start_date<=@dateFinal
 		) saida
 set 	t_paciente.codestado=saida.codeestado,
 		t_paciente.datasaidatarv=saida.start_date
@@ -3065,7 +3072,7 @@ update t_paciente,
 				inner join openmrs.patient_state ps on pg.patient_program_id=ps.patient_program_id
 		where 	pg.voided=0 and ps.voided=0 and
 				pg.program_id=1 and ps.state in (2,3,5) and ps.end_date is null and
-				ps.start_date<=dataFinal
+				ps.start_date<=@dateFinal
 		) saida
 set 	t_paciente.codestado=saida.codeestado,
 		t_paciente.datasaidatarv=saida.start_date
@@ -3107,7 +3114,7 @@ where 	t_paciente.patient_id=aconselhado.patient_id;
 update t_paciente, openmrs.encounter
 set 	t_paciente.aceitabuscaactiva=true,
 		t_paciente.dataaceitabuscaactiva=encounter_datetime
-where encounter.patient_id=t_paciente.patient_id and encounter_type=30 and encounter_datetime<=dataFinal;
+where encounter.patient_id=t_paciente.patient_id and encounter_type=30 and encounter_datetime<=@dateFinal;
 
 
 /*Update Regime*/
@@ -3157,7 +3164,7 @@ update t_paciente,
 						from 	t_paciente p
 								inner join openmrs.encounter e on p.patient_id=e.patient_id
 						where 	encounter_type=18 and e.voided=0 and
-								encounter_datetime <=dataFinal
+								encounter_datetime <=@dateFinal
 						group by patient_id
 					) ultimo_lev
 			where 	o.person_id=ultimo_lev.patient_id and o.obs_datetime=ultimo_lev.encounter_datetime and o.voided=0 and
@@ -3189,7 +3196,7 @@ update t_paciente,
 		inner join openmrs.obs on obs.encounter_id=e.encounter_id
 
 		where	estadio1.data_tarv=obs.obs_datetime and obs.concept_id=5356 and obs.voided=0 and
-				e.encounter_type in (6,9) and e.voided=0 and e.encounter_datetime<=dataFinal
+				e.encounter_type in (6,9) and e.voided=0 and e.encounter_datetime<=@dateFinal
 
 	) estadio
 
@@ -3200,7 +3207,7 @@ where	t_paciente.patient_id=estadio.patient_id;
 update t_paciente,
 		(select 	pg.patient_id
 		from 	t_paciente p inner join openmrs.patient_program pg on p.patient_id=pg.patient_id
-		where 	pg.voided=0 and program_id=5 and date_enrolled<=dataFinal
+		where 	pg.voided=0 and program_id=5 and date_enrolled<=@dateFinal
 		) tratamentotb
 set 	t_paciente.emtratamentotb=true
 where tratamentotb.patient_id=t_paciente.patient_id;
@@ -3213,7 +3220,7 @@ update t_paciente,
 		from 	t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
 				inner join openmrs.obs o on o.encounter_id=e.encounter_id
-		where 	e.voided=0 and o.voided=0 and e.encounter_datetime<=dataFinal and
+		where 	e.voided=0 and o.voided=0 and e.encounter_datetime<=@dateFinal and
 				e.encounter_type in (6,9) and o.concept_id in (6287,1272) and o.value_coded=1699
 	) referCD
 set 	t_paciente.referidocd=true,
@@ -3228,7 +3235,7 @@ update t_paciente,
 		from 	t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
 				inner join openmrs.obs o on o.encounter_id=e.encounter_id
-		where 	e.voided=0 and o.voided=0 and e.encounter_datetime<=dataFinal and
+		where 	e.voided=0 and o.voided=0 and e.encounter_datetime<=@dateFinal and
 				e.encounter_type in (6,9) and o.concept_id=1714
 	) educacao
 set 	t_paciente.Educacaoprevencao=valorEd
@@ -3241,7 +3248,7 @@ update t_paciente,
 				inner join openmrs.patient_program pg on p.patient_id=pg.patient_id
 				inner join openmrs.patient_state ps on pg.patient_program_id=ps.patient_program_id
 		where 	pg.voided=0 and ps.voided=0 and
-				pg.program_id=1 and ps.state=28 and ps.start_date<=dataFinal
+				pg.program_id=1 and ps.state=28 and ps.start_date<=@dateFinal
 		) transf
 set 	t_paciente.transfOutraUs='SIM'
 where 	t_paciente.patient_id=transf.patient_id;
@@ -3253,7 +3260,7 @@ update t_paciente,
 				inner join openmrs.patient_program pg on p.patient_id=pg.patient_id
 				inner join openmrs.patient_state ps on pg.patient_program_id=ps.patient_program_id
 		where 	pg.voided=0 and ps.voided=0 and
-				pg.program_id=2 and ps.state=29 and ps.start_date<=dataFinal
+				pg.program_id=2 and ps.state=29 and ps.start_date<=@dateFinal
 		) transf
 set 	t_paciente.transfOutraUs='SIM'
 where 	t_paciente.patient_id=transf.patient_id;
@@ -3266,7 +3273,7 @@ update t_paciente,
 		from 	t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
 				inner join openmrs.obs o on o.encounter_id=e.encounter_id
-		where 	e.voided=0 and o.voided=0 and e.encounter_datetime<=dataFinal and
+		where 	e.voided=0 and o.voided=0 and e.encounter_datetime<=@dateFinal and
 				e.encounter_type in (6,9) and o.concept_id=6278
 	) elegivel
 set 	t_paciente.dataElegibilidadeInicioTarv=value_datetime
@@ -3278,7 +3285,7 @@ update t_paciente,
 	(	Select 	p.patient_id
 		from 	t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
-		where 	e.voided=0 and e.encounter_datetime<=dataFinal and
+		where 	e.voided=0 and e.encounter_datetime<=@dateFinal and
 				e.encounter_type in (34,24,19) and e.form_id in (131,132)
 	) apss
 set 	t_paciente.apssDisponivel='SIM'
@@ -3292,7 +3299,7 @@ update t_paciente,
 		from 	t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
 				inner join openmrs.obs o on o.encounter_id=e.encounter_id
-		where 	e.voided=0 and e.encounter_datetime<=dataFinal and o.voided=0 and
+		where 	e.voided=0 and e.encounter_datetime<=@dateFinal and o.voided=0 and
 				e.encounter_type in (34,24,19) and e.form_id in (131,132) and o.concept_id=6309
 	) apss
 set 	t_paciente.apssFormaContacto=tipo
@@ -3306,7 +3313,7 @@ update t_paciente,
 		from 	t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
 				inner join openmrs.obs o on o.encounter_id=e.encounter_id
-		where 	e.voided=0 and e.encounter_datetime<=dataFinal and o.voided=0 and
+		where 	e.voided=0 and e.encounter_datetime<=@dateFinal and o.voided=0 and
 				e.encounter_type in (34,24,19) and e.form_id in (131,132) and o.concept_id=1048
 	) apss
 set 	t_paciente.apssQuemInformouSeroestado=tipo
@@ -3319,7 +3326,7 @@ update t_paciente,
 		from 	t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
 				inner join openmrs.obs o on o.encounter_id=e.encounter_id
-		where 	e.voided=0 and e.encounter_datetime<=dataFinal and o.voided=0 and
+		where 	e.voided=0 and e.encounter_datetime<=@dateFinal and o.voided=0 and
 				e.encounter_type in (34,24,19) and e.form_id in (131,132) and o.concept_id=2074
 	) apss
 set 	t_paciente.apssconheceestadoparceiro=tipo
@@ -3340,7 +3347,7 @@ DROP PROCEDURE IF EXISTS `FillTratamentoTb`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTratamentoTb`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTratamentoTb`()
     READS SQL DATA
 BEGIN
 
@@ -3357,11 +3364,12 @@ DECLARE cur_tb CURSOR FOR
 		FROM openmrs.patient_program pp
 				INNER JOIN t_paciente tp
                 ON pp.patient_id = tp.patient_id
-		WHERE pp.program_id = 5 AND pp.voided = 0 and pp.date_completed<=dataFinal;
+		WHERE pp.program_id = 5 AND pp.voided = 0 and pp.date_completed<=(SELECT property_value FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo');
 
 DECLARE CONTINUE HANDLER FOR NOT FOUND SET no_info=1;
 
 TRUNCATE TABLE t_tratamentotb;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 INSERT INTO t_tratamentotb (nid, data)
 SELECT DISTINCT p.nid,dataInicio.data
@@ -3369,14 +3377,14 @@ FROM t_paciente p
 	INNER JOIN (	 SELECT o.value_datetime AS data,e.patient_id
 					 FROM 	openmrs.encounter e
 							INNER JOIN openmrs.obs o ON e.encounter_id=o.encounter_id AND o.person_id=e.patient_id
-					 WHERE 	e.encounter_type IN (6,9) and o.concept_id IN (1113)  AND o.voided=0 AND e.voided=0 and e.encounter_datetime<=dataFinal
+					 WHERE 	e.encounter_type IN (6,9) and o.concept_id IN (1113)  AND o.voided=0 AND e.voided=0 and e.encounter_datetime<=@dateFinal
 
 					UNION
 
 					 SELECT o.obs_datetime AS data,e.patient_id
 					 FROM 	openmrs.encounter e
 							INNER JOIN openmrs.obs o ON e.encounter_id=o.encounter_id AND o.person_id=e.patient_id
-					 WHERE 	e.encounter_type IN (6,9) AND o.concept_id IN (1268) AND o.value_coded=1256 AND o.voided=0 AND e.voided=0 and e.encounter_datetime<=dataFinal
+					 WHERE 	e.encounter_type IN (6,9) AND o.concept_id IN (1268) AND o.value_coded=1256 AND o.voided=0 AND e.voided=0 and e.encounter_datetime<=@dateFinal
 
 			) dataInicio ON dataInicio.patient_id=p.patient_id;
 
@@ -3386,7 +3394,7 @@ FROM t_paciente p
 				FROM 	t_paciente p
 						inner join openmrs.encounter e on p.patient_id=e.patient_id
 						INNER JOIN openmrs.obs o ON e.encounter_id=o.encounter_id
-				WHERE 	e.encounter_type IN (6,9) AND o.concept_id=6120 AND o.voided=0 AND e.voided=0 and e.encounter_datetime<=dataFinal
+				WHERE 	e.encounter_type IN (6,9) AND o.concept_id=6120 AND o.voided=0 AND e.voided=0 and e.encounter_datetime<=@dateFinal
 			) datafim
 	set t_tratamentotb.datafim=datafim.datafim
 	where datafim.nid=t_tratamentotb.nid;
@@ -3429,10 +3437,9 @@ DROP PROCEDURE IF EXISTS `FillTSeguimento`;
 DELIMITER $$
 
 /*!50003 SET @TEMP_SQL_MODE=@@SQL_MODE, SQL_MODE='' */ $$
-CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTSeguimento`(dataFinal date)
+CREATE DEFINER=`root`@`localhost` PROCEDURE `FillTSeguimento`()
     READS SQL DATA
 begin
-
 DECLARE no_more_rows int;
 DECLARE patientId int;
 DECLARE nid varchar(20);
@@ -3446,7 +3453,7 @@ DECLARE cur_apss CURSOR FOR
 				e.encounter_id
 		from 	t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
-		where 	e.voided=0 and e.encounter_datetime<=dataFinal and
+		where 	e.voided=0 and e.encounter_datetime<=(SELECT property_value FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo') and
 				e.encounter_type in (34,24) and e.form_id=132;
 
 
@@ -3458,13 +3465,14 @@ truncate table t_infeccoesoportunisticaseguimento;
 truncate table t_diagnosticoseguimento;
 truncate table t_tratamentoseguimento;
 truncate table t_resultadoslaboratorio;
+SELECT property_value INTO @dateFinal FROM openmrs.global_property WHERE property='esaudemetadata.dateToImportTo';
 
 /*Inserir todos seguimentos do pacientes*/
 	insert into export_db.t_seguimento(encounter_id,patient_id,nid,dataseguimento)
 	select  	e.encounter_id,p.patient_id,p.nid,e.encounter_datetime
 	from 		t_paciente p
 				inner join openmrs.encounter e on p.patient_id=e.patient_id
-	where 		e.voided=0 and e.encounter_type in (6,9) and e.encounter_datetime<=dataFinal;
+	where 		e.voided=0 and e.encounter_type in (6,9) and e.encounter_datetime<=@dateFinal;
 
 /*Update Estadio OMS*/
 update t_seguimento,
@@ -3989,7 +3997,7 @@ FROM	t_paciente p
 		inner join	openmrs.encounter e on p.patient_id=e.patient_id
 		inner join	openmrs.obs o on o.encounter_id=e.encounter_id
 WHERE	e.encounter_type in (6,9,13) and o.voided=0 and e.voided=0 and p.nid is not null and
-		e.encounter_datetime<=dataFinal and
+		e.encounter_datetime<=@dateFinal and
 		o.concept_id in (730,5497,1695,653,654,1694,1693,1021,952,1691,1022,1690,1330,1024,1332,1025,1333,1023,1331,1017,
 						851,21,1692,1018,678,679,1015,729,1016,1307,1011,857,790,848,655,887,12971299,855,856,1006,1007,
 						1008,785,2077,1014,1012,1013,717,1009,1134,1133,1132,1520);
@@ -4029,7 +4037,7 @@ FROM	t_paciente p
 		inner join	openmrs.encounter e on p.patient_id=e.patient_id
 		inner join	openmrs.obs o on o.encounter_id=e.encounter_id
 WHERE	e.encounter_type in (6,9,13) and o.voided=0 and e.voided=0 and p.nid is not null and
-		e.encounter_datetime<=dataFinal and
+		e.encounter_datetime<=@dateFinal and
 		o.concept_id in (300,1655,299,307,1030,45);
 
 
