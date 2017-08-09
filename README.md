@@ -8,6 +8,8 @@ In this process it is necessary to consider and to follow the instruction given 
 ### Prerequisites
 Install latest [esaudemetadata module](https://github.com/esaude/openmrs-module-esaudemetadata), the snapshot version has those changes.
 
+Or (recommended for openmrs v1.9.2 implementations)
+
 Provide the following global properties from the openmrs interface:
 
     1. Health Facility Code which uniquely identify the facility should be provided in the esaudemetadata.hfc global property - should be 5 digits and above.
