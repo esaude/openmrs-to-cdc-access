@@ -6,9 +6,9 @@ In this process it is necessary to consider and to follow the instruction given 
 # Step I
 
 ### Prerequisites
-Install latest [esaudemetadata module](https://github.com/esaude/openmrs-module-esaudemetadata), the snapshot version has those changes.
+Install latest [esaudemetadata module](https://github.com/esaude/openmrs-module-esaudemetadata), the snapshot version has those changes. Only applies to those running 1.11.5+ instances. If you have our latest platform installed, they conatin the global properties - no need to create them, you just need to provide value for them.
 
-Or (recommended for openmrs v1.9.2 implementations)
+For those running 1.9.2(recommended for openmrs v1.9.2 implementations), please add the following global properties
 
 Provide the following global properties from the openmrs interface:
 
